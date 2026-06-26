@@ -993,7 +993,7 @@ const cloud = (()=>{
   // ưu tiên cấu hình người dùng tự nhập; nếu chưa có và chưa bấm "Ngắt" → dùng máy chủ mặc định
   let sb=null, authUid=null, authEmail=null, uidCbs=[], cfg=store.get("ct.sb",null) || (store.get("ct.sbOff",false)?null:DEFAULT_SB);
   const fireUid=()=>{ uidCbs.forEach(f=>{ try{ f(authUid); }catch(e){} }); };
-  const tryInit=()=>{ try{ if(cfg&&cfg.url&&cfg.key&&window.supabase){ sb=window.supabase.createClient(cfg.url,cfg.key);
+  const tryInit=()=>{ try{ if(cfg&&cfg.url&&cfg.key&&window.supabase){ sb=window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
       try{ sb.auth.onAuthStateChange((_e,sess)=>{ var u=sess&&sess.user; authUid=(u&&u.id)||null; authEmail=(u&&u.email)||null; fireUid(); });
         sb.auth.getSession().then(({data})=>{ var u=data&&data.session&&data.session.user; authUid=(u&&u.id)||null; authEmail=(u&&u.email)||null; fireUid(); }); }catch(e){} }
     }catch(e){ sb=null; } return !!sb; };
@@ -1007,7 +1007,7 @@ const cloud = (()=>{
     clear(){ cfg=null; sb=null; authUid=null; store.del("ct.sb"); store.set("ct.sbOff",true); },
     uid(){ return authUid; },
     ready(){ return !!sb && !!authUid; },
-    async signInEmail(email){ if(!sb) return {ok:false,msg:"Chưa có máy chủ"}; try{ const {error}=await sb.auth.signInWithOtp({email:(email||"").trim(),options:{shouldCreateUser:true}}); return error?{ok:false,msg:error.message}:{ok:true}; }catch(e){ return {ok:false,msg:String(e&&e.message||e)}; } },
+    async signInEmail(email){ if(!sb) return {ok:false,msg:"Chưa có máy chủ"}; try{ const rt=(typeof location!=="undefined")?(location.origin+location.pathname):undefined; const {error}=await sb.auth.signInWithOtp({email:(email||"").trim(),options:{shouldCreateUser:true,emailRedirectTo:rt}}); return error?{ok:false,msg:error.message}:{ok:true}; }catch(e){ return {ok:false,msg:String(e&&e.message||e)}; } },
     async verifyEmail(email,token){ if(!sb) return {ok:false,msg:"Chưa có máy chủ"}; try{ const {data,error}=await sb.auth.verifyOtp({email:(email||"").trim(),token:(token||"").trim(),type:"email"}); if(error) return {ok:false,msg:error.message}; authUid=(data&&data.user&&data.user.id)||null; authEmail=(data&&data.user&&data.user.email)||null; return {ok:true,uid:authUid}; }catch(e){ return {ok:false,msg:String(e&&e.message||e)}; } },
     async signOut(){ try{ if(sb) await sb.auth.signOut(); }catch(e){} authUid=null; },
     async test(){ if(!sb) return {ok:false,msg:"Chưa cấu hình hoặc thư viện chưa tải"}; try{ const {error}=await sb.from("clips").select("id",{count:"exact",head:true}); return error?{ok:false,msg:error.message}:{ok:true}; }catch(e){ return {ok:false,msg:String(e&&e.message||e)}; } },
@@ -1429,6 +1429,9 @@ function App(){
     cloud.profileUpsert({id:myId(),name:user.name,elo:user.elo,area:user.area,avatar:user.avatar,games:user.games,looking:!!user.lookingNow,purpose:user.purpose,hand:user.hand,cue:user.cue}); },[user]);
   // theo dõi đổi đăng nhập
   useEffect(()=>{ const off=cloud.onUid&&cloud.onUid(setAuthUid); return off; },[]);
+  // Đăng nhập Email / magic-link: đã có phiên máy chủ nhưng chưa có hồ sơ cục bộ → tạo hồ sơ để vào app (rồi onboarding)
+  useEffect(()=>{ if(authUid && !user && cloud.ready()){ const em=(cloud.userEmail&&cloud.userEmail())||""; const nm=em?em.split("@")[0]:"Cơ thủ";
+    setUser({id:"me",provider:"email",name:nm,elo:1250,area:"hk",games:["Bi-a lỗ (8 bi)","9 bi"],clubs:[],bio:"",online:true,onboarded:false,avail:["Tối"],bet:BET_LEVELS[0],freq:FREQ_LEVELS[1]}); } },[authUid]);
   // nạp hồ sơ thật (công khai) vào cache để tra tên/avatar cho bạn bè & danh sách
   useEffect(()=>{ if(!cloud.on) return; let alive=true,ch;
     const load=()=>cloud.profilesList().then(l=>{ if(!alive||!l) return; l.forEach(r=>{ const a=areaById(r.area); CLOUD_PROFILES[r.id]={id:r.id,name:r.name||"Cơ thủ",elo:r.elo||1200,area:r.area,areaName:a.name,lat:a.lat,lng:a.lng,games:(r.games&&r.games.length?r.games:["9 bi"]),clubs:[],avatar:r.avatar,online:false,cloud:true,zalo:"",banned:!!r.banned}; }); setProfTick(t=>t+1); });
@@ -1692,7 +1695,7 @@ function Login({onLogin}){
   });
   const validEmail = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
   const sendCode = async()=>{ setBusy(true); setMsg(""); const r=await cloud.signInEmail(email); setBusy(false);
-    if(r.ok){ setEstep("code"); setMsg("Đã gửi mã 6 số tới "+email+" — kiểm tra hộp thư (cả Spam)."); }
+    if(r.ok){ setEstep("code"); setMsg("✉️ Đã gửi email tới "+email+". Mở email → nhập MÃ 6 SỐ bên dưới, HOẶC bấm LINK đăng nhập trong email. (Kiểm tra cả Spam.)"); }
     else setMsg("❌ "+(r.msg||"Không gửi được mã")); };
   const verify = async()=>{ setBusy(true); setMsg(""); const r=await cloud.verifyEmail(email,code); setBusy(false);
     if(r.ok){ if(clubMode) onLogin({id:"club",role:"club",provider:"club",name:"CLB",clubName:"",area:"hk",addr:"",desc:"",onboarded:true}); else mk("email", email.split("@")[0]); }
@@ -1709,10 +1712,11 @@ function Login({onLogin}){
             value={email} onChange={e=>{setEmail(e.target.value);setMsg("");}}/>
           <button className="btn block" disabled={!validEmail||busy} onClick={sendCode}>{busy?"Đang gửi…":"✉️ Gửi mã đăng nhập"}</button>
         </React.Fragment> : <React.Fragment>
-          <div style={{fontSize:13,color:"var(--muted)",textAlign:"left"}}>Nhập mã 6 số gửi tới <b>{email}</b> · <span style={{cursor:"pointer",color:"var(--gold)"}} onClick={()=>{setEstep("email");setCode("");setMsg("");}}>Đổi email</span></div>
+          <div style={{fontSize:13,color:"var(--muted)",textAlign:"left"}}>Nhập <b>mã 6 số</b> trong email gửi tới <b>{email}</b> (hoặc bấm <b>link</b> trong email để vào thẳng) · <span style={{cursor:"pointer",color:"var(--gold)"}} onClick={()=>{setEstep("email");setCode("");setMsg("");}}>Đổi email</span></div>
           <input className="input" type="tel" inputMode="numeric" autoComplete="one-time-code" placeholder="Mã 6 số trong email"
             value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,"").slice(0,6))}/>
           <button className="btn block" disabled={code.length<6||busy} onClick={verify}>{busy?"Đang kiểm tra…":"Xác nhận &amp; đăng nhập"}</button>
+          <button className="btn ghost block" style={{marginTop:6}} disabled={busy} onClick={sendCode}>{busy?"…":"Gửi lại email"}</button>
         </React.Fragment>}
         {msg && <div style={{fontSize:12.5,color:msg.charAt(0)==="❌"?"var(--red)":"var(--muted)",textAlign:"left",lineHeight:1.4}}>{msg}</div>}
 
