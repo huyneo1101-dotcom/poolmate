@@ -1513,9 +1513,7 @@ function App(){
 
   const flash = useCallback(msg=>{ setToast(msg); setTimeout(()=>setToast(null),2200); },[]);
 
-  if(!user) return <Login onLogin={u=>{ setUser(u); flash(u.role==="club"?"Chào CLB / Nhà tổ chức 👋":"Chào mừng, "+u.name+" 👋"); }} />;
-  if(user.role==="club") return <ClubDashboard user={user} setUser={setUser} flash={flash} onLogout={()=>{ cloud.signOut(); store.del("ct.user"); setUser(null); }} />;
-  if(!user.onboarded) return <Onboarding user={user} onDone={u=>{setUser(u); flash("Hồ sơ đã sẵn sàng!");}} />;
+  // Login / CLB / Onboarding được render SAU khi đã khai báo hết hook (đặt ngay trước `const shared`) — tránh React #310 (số hook đổi giữa các lần render khi onboarded false→true).
 
   const myUid = authUid || deviceId;
   const cloudRel = useMemo(()=>{ const m={}; (friends||[]).forEach(f=>{ const other=f.requester===myUid?f.addressee:f.requester; m[other]= f.status==="accepted"?"matched":(f.requester===myUid?"sent":"incoming"); }); return m; },[friends,myUid]);
@@ -1620,6 +1618,10 @@ function App(){
     if(distM>700){ flash("Quán gần nhất: "+club.name+" (~"+fmtDist(distM)+") — có vẻ bạn chưa ở quán."); return; }
     if(cloud.on && !cloud.ready()){ flash("Đăng nhập bằng Email để check-in ✉️"); return; }
     cloud.checkinAdd(club.id,(user&&user.name)||"Cơ thủ").then(ok=>{ flash(ok?("✅ Đã check-in tại "+club.name+" (~"+fmtDist(distM)+")"):"Check-in lỗi, thử lại"); }); }); };
+  // Chặn render khi chưa đăng nhập / chưa onboarding — đặt SAU mọi hook để không vi phạm Rules of Hooks (React #310).
+  if(!user) return <Login onLogin={u=>{ setUser(u); flash(u.role==="club"?"Chào CLB / Nhà tổ chức 👋":"Chào mừng, "+u.name+" 👋"); }} />;
+  if(user.role==="club") return <ClubDashboard user={user} setUser={setUser} flash={flash} onLogout={()=>{ cloud.signOut(); store.del("ct.user"); setUser(null); }} />;
+  if(!user.onboarded) return <Onboarding user={user} onDone={u=>{setUser(u); flash("Hồ sơ đã sẵn sàng!");}} />;
   const shared = {user,setUser,rel,setRelOf,flash,matches,challenges,recordMatch,addChallenge,setChallenge,openChat,unreadFor,
     tourjoined,joinTour,leaveTour,recordTour,tourResults,clubTours,ads,
     clips,addClip,likeClip,commentClip,delClip,points,addPoints,theme,setTheme,meId:myId(),
