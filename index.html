@@ -2618,6 +2618,12 @@ const DRILL_GUIDE = {
   "Safety / phòng thủ":{goal:"Giấu bi cái, làm khó đối thủ khi không có bi dễ.",how:"Tập đẩy bi cái về sau cụm/sát băng để đối thủ không thấy bi mục tiêu. Dựng 10 tình huống."},
   "Xoáy lệch (masse nhẹ)":{goal:"Dùng xoáy để né bi cản nhẹ.",how:"Nâng đuôi cơ vừa phải, đánh lệch tâm để bi cái cong qua bi cản. Dùng lực nhỏ để tránh rách nỉ."},
 };
+// Mẹo tập luân phiên theo ngày
+const TRAIN_TIPS=["Giữ yên đầu & thân khi vào cơ.","Đưa mắt theo bi cái tới khi nó dừng hẳn.","Lực vừa đủ — kiểm soát quan trọng hơn mạnh.","Tạo nhịp pre-shot cố định trước mỗi cú.","Mỗi buổi dành 10' luyện bi cắt mỏng.","Vung cơ thẳng, đừng thúc cùi chỏ.","Theo cơ (follow through) dài & mượt.","Chốt điểm ngắm RỒI mới xuống tư thế — đừng chỉnh khi đã cúi.","Tập 1 bài đến khi ổn rồi hãy đổi, đừng nhảy lung tung.","Quay video đường cơ để tự soi lỗi.","Khởi động 5' đánh bi cái không mục tiêu trước khi vào bài.","Ghi điểm mỗi buổi để thấy tiến bộ thật."];
+// Thống kê bài tập (đọc từ ct.drillscores) → % gần nhất mỗi bài + gợi ý bài yếu
+function drillStatsMap(){ const s=store.get("ct.drillscores",[])||[]; const by={}; s.forEach(x=>{ (by[x.drill]||(by[x.drill]=[])).push(x); });
+  const out={}; Object.keys(by).forEach(d=>{ const arr=by[d].slice().sort((a,b)=>a.date<b.date?-1:1); const L=arr[arr.length-1]; out[d]={pct:Math.round(L.made/Math.max(1,L.total)*100),n:arr.length}; }); return out; }
+function weakestDrills(n){ const st=drillStatsMap(); return DRILLS.map(d=>({d,pct:st[d]?st[d].pct:-1})).sort((a,b)=>a.pct-b.pct).slice(0,n||2).map(x=>x.d); }
 
 // Lộ trình luyện tập theo trình độ (kiến thức bi-a chung — tham khảo)
 const LEVEL_PLAN = [
@@ -2648,6 +2654,38 @@ const ROUTINES = [
     how:"Đánh bi cái dừng ngay sau khi chạm bi mục tiêu; tăng cự ly dần (1 → 2 → 3 ô bàn). Mỗi cự ly 10 cú.",target:"Bi cái lệch <1 đường bi ở cự ly xa"},
   {name:"Run-out 15 bi",level:"Nâng cao",goal:"Sức bền & lập kế hoạch cả ván.",
     how:"Rải 15 bi, tự phá rồi cố clear toàn bàn. Đếm số bi vào liên tiếp trước khi trượt.",target:"Chuỗi 8+ bi liên tiếp"},
+  {name:"Mighty X (cơ thẳng + 3 lực)",level:"Mọi trình",goal:"Cơ thật thẳng & làm chủ stop/follow/draw — bài pro hay tập nhất.",
+    how:"Bi cái và bi mục tiêu thẳng hàng qua tâm bàn (hình chữ X). Đánh 3 kiểu: stop, follow, draw; bi cái phải đi đúng đường thẳng. 10 cú mỗi kiểu.",target:"Bi cái về đúng đường 9/10"},
+  {name:"Bowlliards (dọn kiểu bowling)",level:"Trung cấp–Nâng cao",goal:"Đo khả năng run-out theo điểm chuẩn.",
+    how:"10 bi, ball-in-hand phá. Dọn hết 1 lượt = 'strike'; trượt thì lượt 2 dọn nốt = 'spare'. Tính điểm như bowling (10 frame).",target:"Mới ~60đ · TB ~120đ · Cao thủ 200+"},
+  {name:"Equal Offense (3 bi rotation)",level:"Mới–Trung cấp",goal:"Rèn tấn công, đo điểm khách quan.",
+    how:"Rải 3 bi ngẫu nhiên, ball-in-hand, dọn theo thứ tự số rồi rải 3 bi mới. Đếm số 'pattern' chạy được trong 10 lượt.",target:"Số pattern tăng đều theo tuần"},
+  {name:"Hopkins Q-Skills",level:"Mọi trình",goal:"Thang điểm kỹ năng chuẩn để tự xếp hạng.",
+    how:"Bộ cú đặt sẵn theo mẫu, mỗi cú 1 điểm; chạy hết bộ rồi cộng điểm. Lặp định kỳ để so tiến bộ.",target:"Ghi điểm mỗi tháng, mục tiêu tăng"},
+  {name:"Quạt bi cắt (Cut-shot fan)",level:"Mới–Trung cấp",goal:"Vào lỗ ổn ở mọi góc cắt.",
+    how:"1 bi mục tiêu cố định trước lỗ; đặt bi cái lần lượt ở góc 15°→30°→45°→60°→75°, mỗi góc 5 cú.",target:"Vào ≥4/5 ở góc 60°"},
+  {name:"Bi sát băng (Rail cut)",level:"Trung cấp",goal:"Xử lý bi nằm sát/dính băng.",
+    how:"Bi mục tiêu sát băng dài, cắt dọc băng vào lỗ góc. Đổi cự ly & bên, 10 cú mỗi bên.",target:"Vào 6/10 mỗi bên"},
+  {name:"Bi thẳng dài (Long straight-in)",level:"Mọi trình",goal:"Kiểm tra độ thẳng & ổn định của cú đánh.",
+    how:"Bi cái 1 đầu bàn, bi mục tiêu gần lỗ đầu kia, thẳng hàng. Vào bi và giữ bi cái dừng (stop). 10 cú.",target:"Vào 8/10, bi cái đứng yên"},
+  {name:"Thang Draw (Power draw ladder)",level:"Trung cấp–Nâng cao",goal:"Kéo bi cái về có kiểm soát.",
+    how:"Bi mục tiêu cố định; kéo bi cái lùi về các mốc xa dần (1→2→3 ô bàn). Giữ cơ ngang, follow through, đừng nhấc cơ.",target:"Lùi đúng mốc ±1 đường bi"},
+  {name:"Đi bi lũy tiến (Progressive position)",level:"Trung cấp",goal:"Khống chế bi cái vào vùng đích thu nhỏ dần.",
+    how:"Vào 1 bi rồi đưa bi cái vào vùng khoanh sẵn; đạt thì thu nhỏ vùng lại. Đo vùng nhỏ nhất còn trúng.",target:"Vùng đích ≤ 1 nắm tay"},
+  {name:"Đá 3 băng (3-rail kick)",level:"Nâng cao",goal:"Đá trúng bi mục tiêu bằng hệ kim cương.",
+    how:"Dùng hệ Corner-5 (Đích băng-3 = Vị trí bi cái − Điểm ngắm băng-1) đá bi cái qua 3 băng chạm trúng. 10 cú.",target:"Chạm trúng 4/10"},
+  {name:"Phản băng (Bank shots)",level:"Trung cấp–Nâng cao",goal:"Phản băng bi mục tiêu vào lỗ có hệ thống.",
+    how:"Phản 1 băng bi mục tiêu vào lỗ đối diện; ngắm theo kim cương, để ý lực & xoáy. 10 cú.",target:"Vào 4/10"},
+  {name:"Phòng thủ 10 thế (Safety)",level:"Trung cấp–Nâng cao",goal:"Giấu bi cái, làm khó đối thủ.",
+    how:"Dựng 10 tình huống không có bi dễ; mỗi thế đẩy bi cái về nơi đối thủ khó/không thấy bi mục tiêu.",target:"Khoá được 7/10 thế"},
+  {name:"Pattern play (Lên kế hoạch ván)",level:"Nâng cao",goal:"Vạch trước cả chuỗi đường bi.",
+    how:"Rải 1 rack; TRƯỚC khi đánh, vạch thứ tự & đường bi cái cho cả ván. Dọn theo đúng kế hoạch, ghi lại chỗ phải đổi.",target:"Dọn đúng kế hoạch ≥ 70% số bi"},
+  {name:"Carom lũy tiến 1→2→3 băng",level:"Mọi trình · carom",goal:"Nền tảng carom 3 băng theo bậc.",
+    how:"Bi cái chạm 1 băng rồi gom 2 bi; ổn thì thêm băng (2→3). Đúng tốc độ là then chốt; chỉ thêm băng-3 khi 2 băng đã chắc.",target:"Gom 6/10 ở mức 3 băng"},
+  {name:"Carom Corner-5 (hệ Diamond)",level:"Nâng cao · carom",goal:"Đánh 3 băng theo công thức diamond.",
+    how:"Đánh số kim cương (góc = 5). Áp T = D − F (đích băng-3 = vị trí bi cái − điểm ngắm băng-1). Tập 10 đường gom, hiệu chỉnh tốc độ/xoáy.",target:"Gom 4/10 đúng tính toán"},
+  {name:"Phá break + giữ bi cái",level:"Trung cấp",goal:"Phá mạnh mà vẫn kiểm soát bi cái.",
+    how:"Phá 10 lần: đếm số bi xuống lỗ VÀ xem bi cái có nằm giữa bàn không. Ưu tiên chuẩn hơn mạnh.",target:"≥1 bi vào & bi cái giữa bàn 6/10"},
 ];
 
 // Màu nhãn mức độ
@@ -3181,8 +3219,8 @@ function DrillForm({drill,onSave,onClose}){
   );
 }
 
-function TrainingForm({onSave,onClose}){
-  const [f,setF]=useState({date:todayStr(),minutes:60,club:"",game:"Bi-a lỗ (8 bi)",drills:[],rating:3,note:""});
+function TrainingForm({onSave,onClose,init}){
+  const [f,setF]=useState(()=>init||{date:todayStr(),minutes:60,club:"",game:"Bi-a lỗ (8 bi)",drills:[],rating:3,note:""});
   const up=(k,v)=>setF(s=>({...s,[k]:v}));
   const toggle=v=>setF(s=>({...s,drills:s.drills.includes(v)?s.drills.filter(x=>x!==v):[...s.drills,v]}));
   return (
@@ -3191,12 +3229,13 @@ function TrainingForm({onSave,onClose}){
       <div className="field"><label>Ngày</label>
         <input type="date" className="input" value={f.date} max={todayStr()} onChange={e=>up("date",e.target.value)}/></div>
       <div className="field"><label>Thời lượng: <b style={{color:"var(--gold)"}}>{f.minutes} phút</b></label>
-        <input type="range" min="15" max="240" step="15" value={f.minutes} onChange={e=>up("minutes",+e.target.value)} style={{width:"100%"}}/></div>
+        <input type="range" min="15" max="240" step="15" value={f.minutes} onChange={e=>up("minutes",+e.target.value)} style={{width:"100%"}}/>
+        <div className="multi" style={{marginTop:6}}>{[30,45,60,90,120].map(p=><span key={p} className={"pill"+(f.minutes===p?" on":"")} onClick={()=>up("minutes",p)}>{p}′</span>)}</div></div>
       <div className="field"><label>Thể loại</label>
         <select className="select" value={f.game} onChange={e=>up("game",e.target.value)}>{GAME_TYPES.map(g=><option key={g}>{g}</option>)}</select></div>
       <div className="field"><label>Địa điểm (tuỳ chọn)</label>
         <select className="select" value={f.club} onChange={e=>up("club",e.target.value)}><option value="">— Tại nhà / khác —</option>{CLUBS_AZ.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-      <div className="field"><label>Bài tập đã luyện</label>
+      <div className="field"><label>Bài tập đã luyện <span style={{cursor:"pointer",color:"var(--gold)",fontSize:12,fontWeight:700}} onClick={()=>up("drills",weakestDrills(2))}>· 🎯 gợi ý bài yếu</span></label>
         <div className="multi">{DRILLS.map(d=><span key={d} className={"pill"+(f.drills.includes(d)?" on":"")} onClick={()=>toggle(d)}>{d}</span>)}</div></div>
       <div className="field"><label>Tự đánh giá buổi tập</label>
         <div className="row" style={{gap:4}}>{[1,2,3,4,5].map(n=>(
@@ -3216,6 +3255,7 @@ function GoalModal({goal,onSave,onClose}){
       <div className="h1" style={{fontSize:18,marginBottom:6}}>Mục tiêu mỗi tuần</div>
       <div className="sub">Số phút bạn muốn tập trong 7 ngày.</div>
       <div className="field"><label><b style={{color:"var(--gold)"}}>{v} phút/tuần</b> (~{(v/60).toFixed(1)} giờ)</label>
+        <div className="multi" style={{marginBottom:8}}>{[90,180,300,420,600].map(p=><span key={p} className={"pill"+(v===p?" on":"")} onClick={()=>setV(p)}>{(p/60)}h/tuần</span>)}</div>
         <input type="range" min="30" max="900" step="30" value={v} onChange={e=>setV(+e.target.value)} style={{width:"100%"}}/></div>
       <button className="btn block" onClick={()=>onSave(v)}>Lưu mục tiêu</button>
       <button className="btn ghost block" style={{marginTop:8}} onClick={onClose}>Huỷ</button>
@@ -3310,7 +3350,7 @@ function ProgramTab({user}){
         </div>
       );})}
 
-      <div className="shead" style={{marginTop:18}}>Bài tập chuẩn</div>
+      <div className="shead" style={{marginTop:18}}>Bài tập chuẩn ({ROUTINES.length}) — quốc tế &amp; carom</div>
       {ROUTINES.map(r=>(
         <div className="card" key={r.name} style={{marginBottom:10}}>
           <div className="row"><b className="grow">{r.name}</b><span className="chip">{r.level}</span></div>
